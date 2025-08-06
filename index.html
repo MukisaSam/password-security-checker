@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Security Checker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px 20px;
+            max-width: 500px;
+            width: 100%;
+            margin: 10px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+            font-size: clamp(1.5em, 4vw, 2.2em);
+            line-height: 1.2;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        #passwordInput {
+            width: 100%;
+            padding: 15px 50px 15px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: clamp(14px, 3vw, 16px);
+            transition: border-color 0.3s ease;
+            word-break: break-all;
+        }
+
+        #passwordInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+            min-width: 28px;
+            min-height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .strength-meter {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .strength-weak { background: #ff4757; }
+        .strength-fair { background: #ffa502; }
+        .strength-good { background: #2ed573; }
+        .strength-strong { background: #1e90ff; }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .result-item {
+            padding: 12px 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: clamp(14px, 3vw, 16px);
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .result-item span {
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .result-good {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result-bad {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .result-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #666;
+            margin: 20px 0;
+            font-size: clamp(14px, 3vw, 16px);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .strength-label {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: clamp(14px, 3vw, 16px);
+        }
+
+        /* Mobile-specific improvements */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 20px;
+            }
+
+            .container {
+                padding: 25px 15px;
+                border-radius: 15px;
+                margin: 0;
+                min-height: calc(100vh - 40px);
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+            }
+
+            h1 {
+                margin-bottom: 20px;
+                font-size: 1.8em;
+            }
+
+            #passwordInput {
+                padding: 12px 45px 12px 12px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+
+            .toggle-password {
+                right: 12px;
+                font-size: 16px;
+            }
+
+            .result-item {
+                padding: 10px 8px;
+                margin: 6px 0;
+                font-size: 14px;
+            }
+
+            .input-group {
+                margin-bottom: 20px;
+            }
+        }
+
+        /* Very small screens */
+        @media (max-width: 320px) {
+            .container {
+                padding: 20px 12px;
+            }
+
+            h1 {
+                font-size: 1.6em;
+            }
+
+            #passwordInput {
+                padding: 10px 40px 10px 10px;
+            }
+
+            .result-item {
+                padding: 8px 6px;
+                gap: 8px;
+                font-size: 13px;
+            }
+        }
+
+        /* Landscape orientation on mobile */
+        @media (max-height: 500px) and (orientation: landscape) {
+            body {
+                align-items: flex-start;
+                padding: 10px;
+            }
+
+            .container {
+                margin: 0;
+                min-height: auto;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+
+            h1 {
+                margin-bottom: 15px;
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Password Security Checker</h1>
+        
+        <div class="input-group">
+            <input type="password" id="passwordInput" placeholder="Enter your password to check its security">
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">👁️</button>
+        </div>
+
+        <div class="strength-meter">
+            <div class="strength-fill" id="strengthFill"></div>
+        </div>
+        <div class="strength-label" id="strengthLabel">Enter a password to begin</div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Checking against breach database...
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const passwordInput = document.getElementById('passwordInput');
+        const strengthFill = document.getElementById('strengthFill');
+        const strengthLabel = document.getElementById('strengthLabel');
+        const results = document.getElementById('results');
+        const loading = document.getElementById('loading');
+
+        let checkTimeout;
+
+        passwordInput.addEventListener('input', function() {
+            clearTimeout(checkTimeout);
+            checkTimeout = setTimeout(checkPassword, 300);
+        });
+
+        function togglePasswordVisibility() {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+            document.querySelector('.toggle-password').textContent = type === 'password' ? '👁️' : '🙈';
+        }
+
+        function checkPassword() {
+            const password = passwordInput.value;
+            if (!password) {
+                resetDisplay();
+                return;
+            }
+
+            const strength = calculateStrength(password);
+            updateStrengthMeter(strength);
+            displayStrengthResults(password, strength);
+            checkBreachDatabase(password);
+        }
+
+        function calculateStrength(password) {
+            let score = 0;
+            const checks = {
+                length: password.length >= 8,
+                longLength: password.length >= 12,
+                lowercase: /[a-z]/.test(password),
+                uppercase: /[A-Z]/.test(password),
+                numbers: /\d/.test(password),
+                symbols: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+                noSequential: !/123|abc|qwe/i.test(password),
+                noRepeating: !/(.)\1{2,}/.test(password)
+            };
+
+            if (checks.length) score += 1;
+            if (checks.longLength) score += 1;
+            if (checks.lowercase) score += 1;
+            if (checks.uppercase) score += 1;
+            if (checks.numbers) score += 1;
+            if (checks.symbols) score += 1;
+            if (checks.noSequential) score += 1;
+            if (checks.noRepeating) score += 1;
+
+            return {
+                score: score,
+                maxScore: 8,
+                checks: checks,
+                level: score <= 3 ? 'weak' : score <= 5 ? 'fair' : score <= 7 ? 'good' : 'strong'
+            };
+        }
+
+        function updateStrengthMeter(strength) {
+            const percentage = (strength.score / strength.maxScore) * 100;
+            strengthFill.style.width = percentage + '%';
+            strengthFill.className = 'strength-fill strength-' + strength.level;
+            
+            const labels = {
+                weak: 'Weak Password',
+                fair: 'Fair Password',
+                good: 'Good Password',
+                strong: 'Strong Password'
+            };
+            strengthLabel.textContent = labels[strength.level];
+        }
+
+        function displayStrengthResults(password, strength) {
+            results.innerHTML = '';
+
+            const checks = [
+                { key: 'length', text: 'At least 8 characters', passed: strength.checks.length },
+                { key: 'longLength', text: 'At least 12 characters (recommended)', passed: strength.checks.longLength },
+                { key: 'lowercase', text: 'Contains lowercase letters', passed: strength.checks.lowercase },
+                { key: 'uppercase', text: 'Contains uppercase letters', passed: strength.checks.uppercase },
+                { key: 'numbers', text: 'Contains numbers', passed: strength.checks.numbers },
+                { key: 'symbols', text: 'Contains special characters', passed: strength.checks.symbols },
+                { key: 'noSequential', text: 'No common sequences (123, abc, qwe)', passed: strength.checks.noSequential },
+                { key: 'noRepeating', text: 'No repeating characters (aaa, 111)', passed: strength.checks.noRepeating }
+            ];
+
+            checks.forEach(check => {
+                const div = document.createElement('div');
+                div.className = `result-item ${check.passed ? 'result-good' : 'result-bad'}`;
+                div.innerHTML = `<span>${check.passed ? '✅' : '❌'}</span> ${check.text}`;
+                results.appendChild(div);
+            });
+        }
+
+        async function checkBreachDatabase(password) {
+            loading.style.display = 'block';
+            
+            try {
+                const hash = await sha1(password);
+                const prefix = hash.substring(0, 5);
+                const suffix = hash.substring(5).toUpperCase();
+
+                const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+                const text = await response.text();
+                
+                const found = text.split('\n').find(line => line.startsWith(suffix));
+                
+                const div = document.createElement('div');
+                div.className = 'result-item';
+                
+                if (found) {
+                    const count = found.split(':')[1];
+                    div.className += ' result-bad';
+                    div.innerHTML = `<span>⚠️</span> This password has been found in ${parseInt(count).toLocaleString()} data breaches!`;
+                } else {
+                    div.className += ' result-good';
+                    div.innerHTML = `<span>🛡️</span> Password not found in known data breaches`;
+                }
+                
+                results.appendChild(div);
+            } catch (error) {
+                const div = document.createElement('div');
+                div.className = 'result-item result-warning';
+                div.innerHTML = `<span>⚠️</span> Could not check breach database (network error)`;
+                results.appendChild(div);
+            }
+            
+            loading.style.display = 'none';
+        }
+
+        async function sha1(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function resetDisplay() {
+            strengthFill.style.width = '0%';
+            strengthLabel.textContent = 'Enter a password to begin';
+            results.innerHTML = '';
+            loading.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
