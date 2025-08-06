@@ -305,10 +305,10 @@
             const strength = calculateStrength(password);
             updateStrengthMeter(strength);
             displayStrengthResults(password, strength);
-            checkBreachDatabase(password);
+            checkBreachDatabase(password, strength);
         }
 
-        function calculateStrength(password) {
+        function calculateStrength(password, isBreached = null) {
             let score = 0;
             const checks = {
                 length: password.length >= 8,
@@ -318,7 +318,8 @@
                 numbers: /\d/.test(password),
                 symbols: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
                 noSequential: !/123|abc|qwe/i.test(password),
-                noRepeating: !/(.)\1{2,}/.test(password)
+                noRepeating: !/(.)\1{2,}/.test(password),
+                notBreached: isBreached === null ? null : !isBreached
             };
 
             if (checks.length) score += 1;
@@ -329,12 +330,28 @@
             if (checks.symbols) score += 1;
             if (checks.noSequential) score += 1;
             if (checks.noRepeating) score += 1;
+            if (checks.notBreached === true) score += 1;
+
+            const maxScore = isBreached === null ? 8 : 9;
+            let level;
+            
+            if (isBreached === null) {
+                // Initial calculation without breach data
+                level = score <= 3 ? 'weak' : score <= 5 ? 'fair' : score <= 7 ? 'good' : 'strong';
+            } else {
+                // Final calculation with breach data
+                if (isBreached) {
+                    level = 'weak'; // Always weak if breached
+                } else {
+                    level = score <= 4 ? 'weak' : score <= 6 ? 'fair' : score <= 8 ? 'good' : 'strong';
+                }
+            }
 
             return {
                 score: score,
-                maxScore: 8,
+                maxScore: maxScore,
                 checks: checks,
-                level: score <= 3 ? 'weak' : score <= 5 ? 'fair' : score <= 7 ? 'good' : 'strong'
+                level: level
             };
         }
 
@@ -353,7 +370,10 @@
         }
 
         function displayStrengthResults(password, strength) {
-            results.innerHTML = '';
+            // Remove existing strength results but keep breach check
+            const existingBreachCheck = results.querySelector('.breach-check');
+            const strengthItems = results.querySelectorAll('.result-item:not(.breach-check)');
+            strengthItems.forEach(item => item.remove());
 
             const checks = [
                 { key: 'length', text: 'At least 8 characters', passed: strength.checks.length },
@@ -374,8 +394,14 @@
             });
         }
 
-        async function checkBreachDatabase(password) {
+        async function checkBreachDatabase(password, initialStrength) {
             loading.style.display = 'block';
+            
+            // Remove any existing breach check
+            const existingBreachCheck = results.querySelector('.breach-check');
+            if (existingBreachCheck) {
+                existingBreachCheck.remove();
+            }
             
             try {
                 const hash = await sha1(password);
@@ -386,9 +412,15 @@
                 const text = await response.text();
                 
                 const found = text.split('\n').find(line => line.startsWith(suffix));
+                const isBreached = !!found;
+                
+                // Recalculate strength with breach data
+                const finalStrength = calculateStrength(password, isBreached);
+                updateStrengthMeter(finalStrength);
+                displayStrengthResults(password, finalStrength);
                 
                 const div = document.createElement('div');
-                div.className = 'result-item';
+                div.className = 'result-item breach-check';
                 
                 if (found) {
                     const count = found.split(':')[1];
@@ -399,12 +431,12 @@
                     div.innerHTML = `<span>🛡️</span> Password not found in known data breaches`;
                 }
                 
-                results.appendChild(div);
+                results.insertBefore(div, results.firstChild);
             } catch (error) {
                 const div = document.createElement('div');
-                div.className = 'result-item result-warning';
+                div.className = 'result-item breach-check result-warning';
                 div.innerHTML = `<span>⚠️</span> Could not check breach database (network error)`;
-                results.appendChild(div);
+                results.insertBefore(div, results.firstChild);
             }
             
             loading.style.display = 'none';
